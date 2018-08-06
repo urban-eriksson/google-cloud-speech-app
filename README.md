@@ -11,9 +11,6 @@ https://cloud.google.com/docs/authentication/getting-started
 
 Also the following python packages are needed to run the application:
 
-google-cloud-speech
-google-cloud texttospeech
-six
-pyaudio
+google-cloud-speech, google-cloud-texttospeech, six, pyaudio
 
 
