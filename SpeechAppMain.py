@@ -57,7 +57,7 @@ class MicrophoneStream(object):
         # Create a thread-safe buffer of audio data
         self._buff = queue.Queue()
         self.closed = True
-        self.enabled = False
+        self.enabled = True
     def enable(self):
         self.enabled = True
 
@@ -95,6 +95,8 @@ class MicrophoneStream(object):
         """Continuously collect data from the audio stream, into the buffer."""
         if self.enabled:
             self._buff.put(in_data)
+        else:
+            self._buff.put(bytearray(len(in_data)))
         return None, pyaudio.paContinue
 
     def generator(self):
