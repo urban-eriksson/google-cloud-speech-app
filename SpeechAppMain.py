@@ -15,7 +15,9 @@ import StateMachine as sm
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 
-def synthesize_text(output_string):
+def synthesize_text(output_string,micstream):
+
+    micstream.disable()
     from google.cloud import texttospeech
 
     # Just reformatting the text string
@@ -43,6 +45,7 @@ def synthesize_text(output_string):
     stream = p.open(format=FORMAT,channels=1,rate=RATE,output=True)
     stream.write(output_data.audio_content);
     stream.close();
+    micstream.enable()
 
 
 class MicrophoneStream(object):
@@ -54,6 +57,12 @@ class MicrophoneStream(object):
         # Create a thread-safe buffer of audio data
         self._buff = queue.Queue()
         self.closed = True
+        self.enabled = False
+    def enable(self):
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
 
     def __enter__(self):
         self._audio_interface = pyaudio.PyAudio()
@@ -84,7 +93,8 @@ class MicrophoneStream(object):
 
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
         """Continuously collect data from the audio stream, into the buffer."""
-        self._buff.put(in_data)
+        if self.enabled:
+            self._buff.put(in_data)
         return None, pyaudio.paContinue
 
     def generator(self):
@@ -110,11 +120,11 @@ class MicrophoneStream(object):
             yield b''.join(data)
 
 
-def listen_print_loop(responses):
+def listen_print_loop(responses,micstream):
 
     state_machine = sm.StateMachine()
     # Outputs initial state
-    synthesize_text(state_machine.state.text)
+    synthesize_text(state_machine.state.text,micstream)
 
     for response in responses:
 
@@ -133,7 +143,7 @@ def listen_print_loop(responses):
 
             state_machine.status_callback('Speech:' + transcript)
             # Outputs text of current state
-            synthesize_text(state_machine.state.text)
+            synthesize_text(state_machine.state.text,micstream)
 
             if type(state_machine.state) == sm.Greeting:
                 break
@@ -164,7 +174,7 @@ def main():
         responses = client.streaming_recognize(streaming_config, requests)
 
         # Now, put the transcription responses to use.
-        listen_print_loop(responses)
+        listen_print_loop(responses,stream)
 
 
 if __name__ == '__main__':
